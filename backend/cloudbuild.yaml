@@ -1,0 +1,37 @@
+steps:
+# Install dependencies and run tests
+- name: 'gcr.io/cloud-builders/npm'
+  args: ['install']
+- name: 'gcr.io/cloud-builders/npm'
+  args: ['test']
+  env:
+  - 'CI=true' # To ensure Jest runs in CI mode if it has specific CI behavior
+
+# Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/upgradlabs-1746161534725/bookmyshow-backend:latest', '.']
+
+# Push the container image to Google Container Registry (GCR)
+# You can also use Artifact Registry: asia-south1-docker.pkg.dev/upgradlabs-1746954845644/[REPOSITORY_NAME]/hello-express-service:$COMMIT_SHA
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/upgradlabs-1746161534725/bookmyshow-backend:latest']
+
+# Deploy container image to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'run', 'deploy', 'bookmyshow-backend',
+    '--image', 'gcr.io/upgradlabs-1746161534725/bookmyshow-backend:latest',
+    '--region', 'asia-south1',
+    '--platform', 'managed',
+    '--vpc-connector=serverless-connector', # or 'gke', 'anthos'
+    '--allow-unauthenticated', # Allows public access, remove if not needed
+    '--set-env-vars', 'DB_HOST=34.93.252.178,DB_USER=appuser,DB_PASS=secret,DB_NAME=BOOKMYSHOW,REDIS_HOST=10.69.217.35,REDIS_PORT=6379'
+
+  ]
+
+images:
+- 'gcr.io/upgradlabs-1746161534725/bookmyshow-backend:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY 
